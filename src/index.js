@@ -1,4 +1,6 @@
-const fetch = (typeof window !== 'undefined' && window.fetch) || require('node-fetch'); // XXX:
+const fetch = (typeof window !== 'undefined' && window.fetch) || async function () {
+  return (await import('node-fetch')).default.apply(null, arguments);
+}
 
 const JMA_DATA_URL_BASE  = 'https://www.jma.go.jp/bosai/{lv1}/data/{lv2}/';
 const JMA_LAYER_URL_BASE = 'https://www.jma.go.jp/bosai/{lv1}/data/{lv2}/{basetime}/{member}/{validtime}/{lv3}/';
@@ -10,24 +12,24 @@ const defaultPathKeys = {
 
 const jmaLayerInfo = {
   // 基本地図
-  'base':  { layerUrl: 'https://www.jma.go.jp/tile/jma/base/{z}/{x}/{y}.png', category: '', name: 'base', targetTimesFile: false, zoomLevelRange: [3, 11] },
-  'pale':  { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale/{z}/{x}/{y}.png', category: '', name: 'pale', targetTimesFile: false, zoomLevelRange: [2, 14] },
-  'pale2': { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale2/{z}/{x}/{y}.png', category: '', name: 'pale2', targetTimesFile: false, zoomLevelRange: [2, 14] },
-  'green': { layerUrl: 'https://www.jma.go.jp/tile/jma/green-cities/{z}/{x}/{y}.png', category: '', name: 'green', targetTimesFile: false, zoomLevelRange: [3, 10] },
-  'mask':  { pathKeys: { lv2: 'map', lv3: 'surf/mask' }, category: '', name: 'mask', targetTimesFile: false, zoomLevelRange: [3, 14] },
-  'river': { pathKeys: { lv2: 'map', lv3: 'surf/flood' }, category: '', name: '河川', targetTimesFile: false, zoomLevelRange: [8, 14] },
+  'base':  { layerUrl: 'https://www.jma.go.jp/tile/jma/base/{z}/{x}/{y}.png', category: '基本地図', name: 'base', targetTimesFile: false, zoomLevelRange: [3, 11] },
+  'pale':  { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale/{z}/{x}/{y}.png', category: '基本地図', name: 'pale', targetTimesFile: false, zoomLevelRange: [2, 14] },
+  'pale2': { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale2/{z}/{x}/{y}.png', category: '基本地図', name: 'pale2', targetTimesFile: false, zoomLevelRange: [2, 14] },
+  'green': { layerUrl: 'https://www.jma.go.jp/tile/jma/green-cities/{z}/{x}/{y}.png', category: '基本地図', name: 'green', targetTimesFile: false, zoomLevelRange: [3, 10] },
+  'mask':  { pathKeys: { lv2: 'map', lv3: 'surf/mask' }, category: '基本地図', name: 'mask', targetTimesFile: false, zoomLevelRange: [3, 14] },
+  'river': { pathKeys: { lv2: 'map', lv3: 'surf/flood' }, category: '基本地図', name: '河川', targetTimesFile: false, zoomLevelRange: [8, 14] },
 
   // ひまわり
-  'visibleray/jp':  { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B03/ALBD', ext: 'jpg' }, category: 'ひまわり', name: '可視画像（日本域）'              , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
-  'infrared/jp':    { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B13/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '赤外画像（日本域）'              , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
-  'steam/jp':       { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B08/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '水蒸気画像（日本域）'            , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
-  'truecolor/jp':   { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'REP/ETC',  ext: 'jpg' }, category: 'ひまわり', name: 'トゥルーカラー再現画像（日本域）', zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
-  'cloudtop/jp':    { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'SND/ETC',  ext: 'jpg' }, category: 'ひまわり', name: '雲頂強調画像（日本域）'          , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
-  'visibleray/fd':  { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'B03/ALBD', ext: 'jpg' }, category: 'ひまわり', name: '可視画像（全球）'              , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
-  'infrared/fd':    { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'B13/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '赤外画像（全球）'              , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
-  'steam/fd':       { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'B08/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '水蒸気画像（全球）'            , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
-  'truecolor/fd':   { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'REP/ETC',  ext: 'jpg' }, category: 'ひまわり', name: 'トゥルーカラー再現画像（全球）', zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
-  'cloudtop/fd':    { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'SND/ETC',  ext: 'jpg' }, category: 'ひまわり', name: '雲頂強調画像（全球）'          , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
+  'himawari/jp/visibleray': { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B03/ALBD', ext: 'jpg' }, category: 'ひまわり', name: '可視画像（日本域）'              , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
+  'himawari/jp/infrared':   { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B13/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '赤外画像（日本域）'              , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
+  'himawari/jp/steam':      { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B08/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '水蒸気画像（日本域）'            , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
+  'himawari/jp/truecolor':  { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'REP/ETC',  ext: 'jpg' }, category: 'ひまわり', name: 'トゥルーカラー再現画像（日本域）', zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
+  'himawari/jp/cloudtop':   { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'SND/ETC',  ext: 'jpg' }, category: 'ひまわり', name: '雲頂強調画像（日本域）'          , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
+  'himawari/fd/visibleray': { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'B03/ALBD', ext: 'jpg' }, category: 'ひまわり', name: '可視画像（全球）'              , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
+  'himawari/fd/infrared':   { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'B13/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '赤外画像（全球）'              , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
+  'himawari/fd/steam':      { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'B08/TBB',  ext: 'jpg' }, category: 'ひまわり', name: '水蒸気画像（全球）'            , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
+  'himawari/fd/truecolor':  { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'REP/ETC',  ext: 'jpg' }, category: 'ひまわり', name: 'トゥルーカラー再現画像（全球）', zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
+  'himawari/fd/cloudtop':   { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'fd', lv3: 'SND/ETC',  ext: 'jpg' }, category: 'ひまわり', name: '雲頂強調画像（全球）'          , zoomLevelRange: [3, 5], targetTimesFile: 'targetTimes_fd.json' },
 
   // 雨雲の動き
   'raincloud':        { pathKeys: { lv2: 'nowc', lv3: 'surf/hrpns'        }, category: '雨雲の動き', name: '雨雲の動き（高解像度降水ナウキャスト）',   zoomLevelRange: [3, 10], targetTimesFile: ['targetTimes_N1.json', 'targetTimes_N2.json'], targetTimesElement: 'hrpns' },
@@ -36,7 +38,7 @@ const jmaLayerInfo = {
   'amds_rain10m':     { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/amds_rain10m' }, category: '雨雲の動き', name: 'アメダス１０分間雨量'                                     , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'amds_rain10m' },
   'liden':            { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/liden'        }, category: '雨雲の動き', name: '前５分間の雷の状況'                                       , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'liden' },
   'raincloud-nodata': { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/hrpns_nd'     }, category: '雨雲の動き', name: '観測範囲外領域 [雨雲の動き（高解像度降水ナウキャスト）]'  , targetTimesFile: ['targetTimes_N1.json', 'targetTimes_N2.json'], targetTimesElement: 'hrpns_nd' },
-  'liden-nodata':     { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/thns_nd'      }, category: '雨雲の動き', name: '観測範囲外領域 [雷活動度（雷ナウキャスト）]'              , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'thns_nd' },
+  'thunder-nodata':   { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/thns_nd'      }, category: '雨雲の動き', name: '観測範囲外領域 [雷活動度（雷ナウキャスト）]'              , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'thns_nd' },
   'tornado-nodata':   { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/trns_nd'      }, category: '雨雲の動き', name: '観測範囲外領域 [竜巻発生確度（竜巻発生確度ナウキャスト）]', targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'trns_nd' },
 
   // 今後の雨
@@ -103,11 +105,11 @@ function isStaticLayer(layerId) {
   return info.targetTimesFile === false || info.targetTimesFile === null;
 }
 
-async function fetchTargetTimes(layerId) {
+export async function fetchTargetTimes(layerId) {
   const info = jmaLayerInfo[layerId];
   if (!info) return null;
 
-  if (isStaticLayer(layerId)) return null;
+  if (isStaticLayer(layerId)) return [{ layerInfo: getLayerInfo(layerId), tense: 'latest' }];
 
   const timeForCache = new Date().toJSON().substr(0, 16).replace(/[^0-9]/g, ''); // 1分単位
   if (timeForCache !== _lastTimeForCache) {
@@ -147,17 +149,19 @@ async function fetchTargetTimes(layerId) {
   return targetTimes;
 }
 
-function getLayerInfo(layerId, targetTimes = null) {
+export function getLayerInfo(layerId, targetTimes = null) {
   const info = jmaLayerInfo[layerId];
   if (!info) return null;
 
   const result = {
+    id: layerId,
     name: info.name || layerId,
     category: info.category || '',
 
     requireTargetTimes: !isStaticLayer(layerId),
 
     layerType: info.type || 'tile',
+    format: info.pathKeys && info.pathKeys.ext || defaultPathKeys.ext, // geojson, jpg, png, pbf
 
     attributions: '気象データ &copy; Japan Meteorological Agency',
   }
@@ -180,7 +184,7 @@ function rewriteURL(url, template) {
   return template ? url.replace(/{([a-zA-Z0-9]+)}/g, (match, p1) => typeof template[p1] === 'string' || typeof template[p1] === 'number' ? String(template[p1]) : `{${p1}}`) : url;
 }
 
-function getLayerURL(layerId, targetTime, template = null) {
+export function getLayerURL(layerId, targetTime, template = null) {
   const info = jmaLayerInfo[layerId];
   if (!info) return null;
 
@@ -197,8 +201,6 @@ function getLayerURL(layerId, targetTime, template = null) {
   });
 }
 
-export {
-  fetchTargetTimes,
-  getLayerURL,
-  getLayerInfo,
+export function getLayerIds() {
+  return Object.keys(jmaLayerInfo);
 }

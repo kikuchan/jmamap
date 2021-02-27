@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "exports": {
+    "import": "./src/index.js"
+  },
+  "name": "jmamap",
+  "version": "1.0.0",
+  "description": "JMA MAP Loader",
+  "main": "src/index.js",
+  "scripts": {
+  },
+  "author": "",
+  "license": "MIT"
+}
