@@ -4,10 +4,14 @@
 
 気象庁の地図データを取得するヘルパーライブラリです。
 
+## デモ
+
+[動作デモ - examples/map.html](https://kikuchan.github.io/jmamap/examples/map.html)
+
 ## 使い方
 
 ```
-import { fetchTargetTimes } from './jmamap';
+import { fetchTargetTimes } from 'jmamap';
 
 const targetTimes = await fetchTargetTimes('raincloud');
 const latest = targetTimes.find(x => x.tense === 'latest');
@@ -70,6 +74,8 @@ const latest = targetTimes.find(x => x.tense === 'latest');
   ), 'screen');
 ```
 とすれば、それっぽく重なります。
+
+詳しくは examples/ に実際に動作するファイルを置いてあるので見てみてください。
 
 ## 注意事項・制限
 
