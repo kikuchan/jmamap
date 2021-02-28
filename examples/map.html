@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>JMA MAP test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/css/ol.css" type="text/css">
+  <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/build/ol.js"></script>
+  <style>
+    HTML, BODY {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+    }
+
+    BODY {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    TABLE, TH, TD {
+      white-space: nowrap;
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 2px;
+    }
+
+    #map {
+      box-sizing : border-box;
+
+      flex: 0 0 50vw;
+      height: 100%;
+
+      border: 1px solid black;
+    }
+
+    #app {
+      box-sizing : border-box;
+
+      flex: 0 0 50vw;
+      height: 100%;
+
+      padding: 10px;
+
+      overflow: scroll;
+    }
+
+    tr.selected {
+      background-color: #fee;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
+  </style>
+
+  <script type="module">
+    import Vue from 'https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.esm.browser.js'
+    import { fetchTargetTimes, getLayerIds, getLayerInfo } from '../src/index.js'
+
+    function formatDate(d) {
+      return String(d.getFullYear()).padStart(4, '0') +
+        '-' + String(d.getMonth() + 1).padStart(2, '0') +
+        '-' + String(d.getDate()).padStart(2, '0') +
+        ' ' + String(d.getHours()).padStart(2, '0') +
+        ':' + String(d.getMinutes()).padStart(2, '0')
+    }
+
+    window.addEventListener('DOMContentLoaded', (event) => {
+      new Vue({
+        el: '#app',
+
+        async mounted () {
+          const source = new ol.source.XYZ();
+          this._source = source;
+
+          const map = new ol.Map({
+            target: 'map',
+            layers: [
+              new ol.layer.Tile({
+                source,
+              }),
+
+              new ol.layer.Tile({ source: new ol.source.XYZ((await fetchTargetTimes('mask'))[0].layerInfo) }),
+            ],
+            view: new ol.View({
+              center: ol.proj.fromLonLat([135, 35]),
+              zoom: 5,
+            }),
+          });
+        },
+
+        computed: {
+          layers () {
+            return this.layerIds.map(id => getLayerInfo(id));
+          },
+        },
+
+        data () {
+          return {
+            selectedId: 'raincloud',
+            layerIds: getLayerIds(),
+            result: [],
+            loading: false,
+            selectedUrl: null,
+            columns: {
+              'basetime': row => row.basetimeInDate && formatDate(row.basetimeInDate) || '--',
+              'validtime': row => row.validtimeInDate && formatDate(row.validtimeInDate) || '--',
+
+              'tense': row => row.tense,
+
+              'URL': row => row.layerInfo.url,
+              'zoom levels': row => row.layerInfo.zoomLevels,
+            },
+          }
+        },
+
+        watch: {
+          selectedId () {
+            this.fetch();
+          },
+        },
+
+        methods: {
+          async fetch () {
+            this.loading = true;
+            const targetTimes = await fetchTargetTimes(this.selectedId).catch(e => []);
+            this.loading = false;
+            this.result = targetTimes;
+
+            if (targetTimes.length > 0) {
+              const suitable = targetTimes.find(x => x.tense === 'latest') || (targetTimes.filter(x => x.tense != 'past') || [])[0]
+              if (suitable) this.setUrl(suitable.layerInfo.url);
+            }
+          },
+
+          setUrl(url) {
+            console.log("loading " + url);
+            this.selectedUrl = url;
+            this._source.setUrl(url);
+          }
+        },
+      })
+
+    });
+  </script>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="app" v-cloak>
+    <div>
+      <select v-model="selectedId">
+        <option v-for="layer in layers" :value="layer.id">{{ (layer.category ? layer.category + ' - ' : '') + layer.name }}</option>
+      </select>
+      <button @click="fetch" :disabled="loading">fetch</button>
+    </div>
+
+    <div v-if="loading">
+      Loading...
+    </div>
+    <table v-else>
+      <tr><th v-for="(col, name) in columns">{{ name }}</th></tr>
+      <tr v-for="row in result" :class="{ selected: row.layerInfo && row.layerInfo.url == selectedUrl }">
+        <td v-for="(col, name) in columns">
+          <a v-if="name == 'URL'" href="#" @click.stop.prevent="setUrl(col(row))">
+            {{ col(row) }}
+          </a>
+          <template v-else>
+            {{ col(row) }}
+          </template>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
