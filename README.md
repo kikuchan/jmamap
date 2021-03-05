@@ -2,25 +2,36 @@
 
 ## What is it?
 
+Helper functions to obtain tile information of map provided by [Japan Meteorological Agency](https://www.jma.go.jp/)
+
 気象庁の地図データを取得するヘルパーライブラリです。
 
-## デモ
 
-[動作デモ - examples/map.html](https://kikuchan.github.io/jmamap/examples/map.html)
+## DEMO
 
-## 使い方
+* [動作デモ - examples/map.html](https://kikuchan.github.io/jmamap/examples/map.html)
+* [ひまわり画像デモ - examples/himawari.html](https://kikuchan.github.io/jmamap/examples/himawari.html)
+
+
+## How to install
+
+```
+npm i jmamap
+```
+
+
+## How to use
 
 ```
 import { fetchTargetTimes } from 'jmamap';
 
 const targetTimes = await fetchTargetTimes('raincloud');
-const latest = targetTimes.find(x => x.tense === 'latest');
 ```
 
 とすると
 
 ```
-{
+[{
   basetime: '20210227101000',
   validtime: '20210227101000',
   elements: [ 'hrpns', 'hrpns_nd' ],
@@ -41,15 +52,22 @@ const latest = targetTimes.find(x => x.tense === 'latest');
   },
   basetimeInDate: 2021-02-27T10:10:00.000Z,
   validtimeInDate: 2021-02-27T10:10:00.000Z
-}
+}, ...]
 ```
 のような出力が得られます。
-（`targetTimes` は取得できたものを多少加工して、さらに `basetime`, `validtime` 順に並べかえています）
+基本部分はサーバから取得できる `targetTimes.json` そのままですが、情報を追記して、さらに `basetime`, `validtime` 順に並べかえています。
 
-`url` の部分をそのままコピーして、例えば地理院地図の「ツール → その他 → 外部タイル」で貼り付けると、ロードできます。
+`layerInfo` の `url` の部分をそのままコピーして、例えば地理院地図の「ツール → その他 → 外部タイル」で貼り付けると、タイルをロードできます。
 
 
-また、OpenLayers だったらそのまま雑に
+大抵、最新の1件（もしくは直近の予報）が欲しいと思いますので、その際は
+```
+const suitable = targetTimes.find(x => x.tense === 'latest') || (targetTimes.filter(x => x.tense != 'past') || [])[0]
+```
+などのようにして、取り出してください。
+
+
+また、OpenLayers であればそのまま雑に
 ```
   map.addLayer(
     new TileLayer({
@@ -57,13 +75,19 @@ const latest = targetTimes.find(x => x.tense === 'latest');
     })
   );
 ```
-とすれば、読み込めます。
+としても、読み込めます。
 
 ちなみに雲画像は、↓のように
 ```
-  function withBlendMode(layer, operation) {
-    layer.on('precompose' , function (evt) { evt.context.globalCompositeOperation = operation; });
-    layer.on('postcompose', function (evt) { evt.context.globalCompositeOperation = 'source-over'; });
+  function withBlendMode(layer, operation, filter) {
+    layer.on('prerender' , function (evt) {
+      evt.context.save();
+      evt.context.globalCompositeOperation = operation;
+      if (filter) evt.context.filter = filter;
+    });
+    layer.on('postrender', function (evt) {
+      evt.context.restore();
+    });
     return layer;
   }
 
@@ -71,11 +95,12 @@ const latest = targetTimes.find(x => x.tense === 'latest');
     new TileLayer({
       source: new XYZ((await fetchTargetTimes('infrared/fd')).find(x => x.tense == 'latest').layerInfo),
     })
-  ), 'screen');
+  ), 'screen', 'contrast(200%)');
 ```
-とすれば、それっぽく重なります。
+とすれば、それっぽく重なります。（ `screen` や `contrast()` は、下地図との兼ね合いを見ながら、お好みで調整してください）
 
-詳しくは examples/ に実際に動作するファイルを置いてあるので見てみてください。
+詳しくは examples/ にある[サンプル](https://kikuchan.github.io/jmamap/examples/himawari.html)などをご覧ください。
+
 
 ## 注意事項・制限
 

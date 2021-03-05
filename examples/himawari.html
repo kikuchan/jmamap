@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>JMA MAP test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/css/ol.css" type="text/css">
+  <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/build/ol.js"></script>
+  <style>
+    HTML, BODY {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+    }
+
+    #map {
+      box-sizing : border-box;
+
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+
+  <script type="module">
+    import { fetchTargetTimes, getLayerIds, getLayerInfo } from '../src/index.js'
+
+    async function fetchLayer(layerId) {
+      const targetTimes = await fetchTargetTimes(layerId).catch(e => []);
+
+      if (targetTimes && targetTimes.length > 0) {
+        const suitable = targetTimes.find(x => x.tense === 'latest') || (targetTimes.filter(x => x.tense != 'past') || [])[0]
+        if (suitable) return suitable.layerInfo;
+      }
+
+      return null;
+    }
+
+    function withBlendMode(layer, operation, filter) {
+      layer.on('prerender' , function (evt) {
+        evt.context.save();
+        evt.context.globalCompositeOperation = operation;
+        if (filter) evt.context.filter = filter;
+      });
+      layer.on('postrender', function (evt) {
+        evt.context.restore();
+      });
+      return layer;
+    }
+
+    window.addEventListener('DOMContentLoaded', async (event) => {
+      const himawari = withBlendMode(new ol.layer.Tile({ source: new ol.source.XYZ(await fetchLayer('himawari/fd/infrared')) }), 'screen', 'contrast(200%)');
+      const raincloud = new ol.layer.Tile({ source: new ol.source.XYZ(await fetchLayer('raincloud')), opacity: 0.7 });
+
+      const map = new ol.Map({
+        target: 'map',
+        layers: [
+          new ol.layer.Tile({ source: new ol.source.XYZ(await fetchLayer('green')) }), // 緑地図
+          //new ol.layer.Tile({ source: new ol.source.XYZ({ url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg" }) }), // 航空写真
+          withBlendMode(new ol.layer.Tile({ source: new ol.source.XYZ({ url: "https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png" }) }), 'overlay'), // 陰影タイル(日本)
+          //withBlendMode(new ol.layer.Tile({ source: new ol.source.XYZ({ url: "https://cyberjapandata.gsi.go.jp/xyz/earthhillshade/{z}/{x}/{y}.png" }) }), 'overlay'), // 陰影タイル(全球)
+
+          himawari,
+          raincloud,
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([138.2, 35.7]),
+          zoom: 5,
+        }),
+      });
+
+      document.getElementById('himawari').addEventListener('click', function () {
+        himawari.setVisible(!himawari.getVisible());
+      });
+      document.getElementById('raincloud').addEventListener('click', function () {
+        raincloud.setVisible(!raincloud.getVisible());
+      });
+    });
+  </script>
+</head>
+<body>
+  <div id="map"></div>
+  <div style="position: absolute; left: .5em; bottom: .5em;">
+    <button id="himawari">Toggle Himawari</button>
+    <button id="raincloud">Toggle RainCloud</button>
+  </div>
+</body>
+</html>
