@@ -72,6 +72,7 @@
         async mounted () {
           this._tile_source = new ol.source.XYZ();
           this._vector_source = new ol.source.Vector();
+          this._vector_tile_source = new ol.source.VectorTile({ format: new ol.format.MVT(), });
 
           const map = new ol.Map({
             target: 'map',
@@ -82,6 +83,10 @@
 
               new ol.layer.Vector({
                 source: this._vector_source,
+              }),
+
+              new ol.layer.VectorTile({
+                source: this._vector_tile_source,
               }),
 
               new ol.layer.Tile({ source: new ol.source.XYZ((await fetchTargetTimes('mask'))[0].layerInfo) }),
@@ -133,27 +138,32 @@
 
             if (targetTimes.length > 0) {
               const suitable = targetTimes.find(x => x.tense === 'latest') || (targetTimes.filter(x => x.tense != 'past') || [])[0]
-              if (suitable) this.setUrl(suitable.layerInfo.url, suitable.layerInfo.layerType);
+              if (suitable) this.setUrl(suitable.layerInfo.url, suitable.layerInfo);
             }
           },
 
-          async setUrl(url, layerType) {
+          async setUrl(url, info) {
             console.log("loading " + url);
             this.selectedUrl = url;
 
-            switch (layerType) {
+            switch (info.layerType) {
             case 'tile':
-              this._tile_source.setUrl(url);
+              if (info.format === 'pbf') {
+                this._vector_tile_source.setUrl(url);
+              } else {
+                this._tile_source.setUrl(url);
+              }
               break;
+
             case 'geojson':
               // this._vector_source.setUrl(url); // Unfortunately, it doesn't work.
               const json = await fetch(url).then(r => r.json());
               this._vector_source.clear();
               this._vector_source.addFeatures(new ol.format.GeoJSON({ dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }).readFeatures(json));
               break;
-            case 'pbf':
+
             default:
-              console.log("Unsupported layer type: " + layerType);
+              console.log("Unsupported layer type: " + info.layerType);
               break;
             }
           }
@@ -180,7 +190,7 @@
       <tr><th v-for="(col, name) in columns">{{ name }}</th></tr>
       <tr v-for="row in result" :class="{ selected: row.layerInfo && row.layerInfo.url == selectedUrl }">
         <td v-for="(col, name) in columns">
-          <a v-if="name == 'URL'" :href="row.layerInfo.url" @click.stop.prevent="setUrl(row.layerInfo.url, row.layerInfo.layerType)">
+          <a v-if="name == 'URL'" :href="row.layerInfo.url" @click.stop.prevent="setUrl(row.layerInfo.url, row.layerInfo)">
             {{ col(row) }}
           </a>
           <template v-else>

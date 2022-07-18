@@ -1,15 +1,21 @@
 {
   "type": "module",
   "exports": {
-    "import": "./src/index.js"
+    ".": "./src/index.js",
+    "./ol": "./src/ol.js"
   },
   "name": "jmamap",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "JMA MAP Loader",
   "main": "src/index.js",
   "homepage": "https://github.com/kikuchan/jmamap#readme",
-  "scripts": {
-  },
+  "scripts": {},
   "author": "kikuchan <kikuchan98@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "peerDependencies": {
+    "ol": "^6.0.0"
+  },
+  "devDependencies": {
+    "ol": "^6.14.1"
+  }
 }

@@ -7,12 +7,6 @@ Helper functions to obtain tile information of map provided by [Japan Meteorolog
 気象庁の地図データを取得するヘルパーライブラリです。
 
 
-## DEMO
-
-* [動作デモ - examples/map.html](https://kikuchan.github.io/jmamap/examples/map.html)
-* [ひまわり画像デモ - examples/himawari.html](https://kikuchan.github.io/jmamap/examples/himawari.html)
-
-
 ## How to install
 
 ```
@@ -22,6 +16,20 @@ npm i jmamap
 
 ## How to use
 
+### Simply with OpenLayers
+```
+import { JMALayer } from 'jmamap';
+    :
+map.addLayer(new JMALayer('base'));
+map.addLayer(new JMALayer('raincloud'));
+```
+
+![image](https://user-images.githubusercontent.com/445223/179498842-e7dbd463-8ba5-408a-9a8c-1c520ebfc055.png)
+
+See [examples/ol-jmalayer](https://github.com/kikuchan/jmamap/tree/main/examples/ol-jmalayer) for more details.
+
+
+### As an access helper library
 ```
 import { fetchTargetTimes } from 'jmamap';
 
@@ -65,41 +73,6 @@ const targetTimes = await fetchTargetTimes('raincloud');
 const suitable = targetTimes.find(x => x.tense === 'latest') || (targetTimes.filter(x => x.tense != 'past') || [])[0]
 ```
 などのようにして、取り出してください。
-
-
-また、OpenLayers であればそのまま雑に
-```
-  map.addLayer(
-    new TileLayer({
-      source: new XYZ((await fetchTargetTimes('raincloud')).find(x => x.tense == 'latest').layerInfo),
-    })
-  );
-```
-としても、読み込めます。
-
-ちなみに雲画像は、↓のように
-```
-  function withBlendMode(layer, operation, filter) {
-    layer.on('prerender' , function (evt) {
-      evt.context.save();
-      evt.context.globalCompositeOperation = operation;
-      if (filter) evt.context.filter = filter;
-    });
-    layer.on('postrender', function (evt) {
-      evt.context.restore();
-    });
-    return layer;
-  }
-
-  map.addLayer(withBlendMode(
-    new TileLayer({
-      source: new XYZ((await fetchTargetTimes('infrared/fd')).find(x => x.tense == 'latest').layerInfo),
-    })
-  ), 'screen', 'contrast(200%)');
-```
-とすれば、それっぽく重なります。（ `screen` や `contrast()` は、下地図との兼ね合いを見ながら、お好みで調整してください）
-
-詳しくは examples/ にある[サンプル](https://kikuchan.github.io/jmamap/examples/himawari.html)などをご覧ください。
 
 
 ## 注意事項・制限

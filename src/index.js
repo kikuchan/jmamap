@@ -1,7 +1,3 @@
-const fetch = (typeof window !== 'undefined' && window.fetch) || async function () {
-  return (await import('node-fetch')).default.apply(null, arguments);
-}
-
 const JMA_DATA_URL_BASE  = 'https://www.jma.go.jp/bosai/{lv1}/data/{lv2}/';
 const JMA_LAYER_URL_BASE = 'https://www.jma.go.jp/bosai/{lv1}/data/{lv2}/{basetime}/{member}/{validtime}/{lv3}/';
 
@@ -13,11 +9,13 @@ const defaultPathKeys = {
 const jmaLayerInfo = {
   // 基本地図
   'base':  { layerUrl: 'https://www.jma.go.jp/tile/jma/base/{z}/{x}/{y}.png', category: '基本地図', name: 'base', targetTimesFile: false, zoomLevelRange: [3, 11] },
-  'pale':  { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale/{z}/{x}/{y}.png', category: '基本地図', name: 'pale', targetTimesFile: false, zoomLevelRange: [2, 14] },
-  'pale2': { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale2/{z}/{x}/{y}.png', category: '基本地図', name: 'pale2', targetTimesFile: false, zoomLevelRange: [2, 14] },
+  'pale':  { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale/{z}/{x}/{y}.png', category: '基本地図(地名あり)', name: 'pale', targetTimesFile: false, zoomLevelRange: [2, 14] },
+  'pale2': { layerUrl: 'https://www.jma.go.jp/tile/gsi/pale2/{z}/{x}/{y}.png', category: '基本地図(地名なし)', name: 'pale2', targetTimesFile: false, zoomLevelRange: [2, 14] },
   'green': { layerUrl: 'https://www.jma.go.jp/tile/jma/green-cities/{z}/{x}/{y}.png', category: '基本地図', name: 'green', targetTimesFile: false, zoomLevelRange: [3, 10] },
   'mask':  { pathKeys: { lv2: 'map', lv3: 'surf/mask' }, category: '基本地図', name: 'mask', targetTimesFile: false, zoomLevelRange: [3, 14] },
   'river': { pathKeys: { lv2: 'map', lv3: 'surf/flood' }, category: '基本地図', name: '河川', targetTimesFile: false, zoomLevelRange: [8, 14] },
+
+  'cities': { type: 'geojson', pathKeys: { lv2: 'map', lv3: 'surf/municipality_name' }, category: '基本地図', name: '自治体名', targetTimesFile: false, },
 
   // ひまわり
   'himawari/jp/visibleray': { pathKeys: { lv1: 'himawari', lv2: 'satimg', member: 'jp', lv3: 'B03/ALBD', ext: 'jpg' }, category: 'ひまわり', name: '可視画像（日本域）'              , zoomLevelRange: [3, 6], targetTimesFile: 'targetTimes_jp.json' },
@@ -35,11 +33,12 @@ const jmaLayerInfo = {
   'raincloud':        { pathKeys: { lv2: 'nowc', lv3: 'surf/hrpns'        }, category: '雨雲の動き', name: '雨雲の動き（高解像度降水ナウキャスト）',   zoomLevelRange: [3, 10], targetTimesFile: ['targetTimes_N1.json', 'targetTimes_N2.json'], targetTimesElement: 'hrpns' },
   'thunder':          { pathKeys: { lv2: 'nowc', lv3: 'surf/thns'         }, category: '雨雲の動き', name: '雷活動度（雷ナウキャスト）',               zoomLevelRange: [3,  9],  targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'thns' },
   'tornado':          { pathKeys: { lv2: 'nowc', lv3: 'surf/trns'         }, category: '雨雲の動き', name: '竜巻発生確度（竜巻発生確度ナウキャスト）', zoomLevelRange: [3, 10], targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'trns' }, // XXX: zoomLevels 不明
-  'amds_rain10m':     { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/amds_rain10m' }, category: '雨雲の動き', name: 'アメダス１０分間雨量'                                     , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'amds_rain10m' },
+  'amds-rain10m':     { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/amds_rain10m' }, category: '雨雲の動き', name: 'アメダス１０分間雨量'                                     , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'amds_rain10m', basetimeDelay: 15*60*1000 }, // 15分、データが遅れる
   'liden':            { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/liden'        }, category: '雨雲の動き', name: '前５分間の雷の状況'                                       , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'liden' },
   'raincloud-nodata': { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/hrpns_nd'     }, category: '雨雲の動き', name: '観測範囲外領域 [雨雲の動き（高解像度降水ナウキャスト）]'  , targetTimesFile: ['targetTimes_N1.json', 'targetTimes_N2.json'], targetTimesElement: 'hrpns_nd' },
   'thunder-nodata':   { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/thns_nd'      }, category: '雨雲の動き', name: '観測範囲外領域 [雷活動度（雷ナウキャスト）]'              , targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'thns_nd' },
   'tornado-nodata':   { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/trns_nd'      }, category: '雨雲の動き', name: '観測範囲外領域 [竜巻発生確度（竜巻発生確度ナウキャスト）]', targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'trns_nd' },
+  'linear-rainfall':  { type: 'geojson', pathKeys: { lv2: 'nowc', lv3: 'surf/slmcs'        }, category: '雨雲の動き', name: '線状降水帯', targetTimesFile: 'targetTimes_N3.json', targetTimesElement: 'slmcs', basetimeDelay: 15*60*1000 }, // 15分、データが遅れる
 
   // 今後の雨
   'rainfall-1h':    { pathKeys: { lv2: 'rasrf', lv3: 'surf/rasrf'    }, category: '今後の雨', name: '1時間降水量',  zoomLevelRange: [3, 10], targetTimesElement: 'rasrf' },
@@ -49,10 +48,21 @@ const jmaLayerInfo = {
   // 天気予報分布
   'weather':     { pathKeys: { lv2: 'wdist', lv3: 'surf/wm'       }, category: '天気予報分布', name: '天気', targetTimesElement: 'wm', zoomLevelRange: [3, 10] },
   'temperature': { pathKeys: { lv2: 'wdist', lv3: 'surf/temp'     }, category: '天気予報分布', name: '気温', targetTimesElement: 'temp', zoomLevelRange: [3, 10] },
-  'r3':          { pathKeys: { lv2: 'wdist', lv3: 'surf/r3'       }, category: '天気予報分布', name: '3時間降水量', targetTimesElement: 'r3', zoomLevelRange: [3, 10] }, // XXX: （basetime, validtime のペアを）同時刻にしても絵が 'rasrf' と合わない...
+  'r3':          { pathKeys: { lv2: 'wdist', lv3: 'surf/r3'       }, category: '天気予報分布', name: '3時間降水量', targetTimesElement: 'r3', zoomLevelRange: [3, 10] }, // XXX: （basetime, validtime のペアを）同時刻にしても絵が 'rasrf' と合わない…
   's3':          { pathKeys: { lv2: 'wdist', lv3: 'surf/s3'       }, category: '天気予報分布', name: '3時間降雪量', targetTimesElement: 's3', zoomLevelRange: [3, 10] }, // XXX:  'snowf03h' で↑と同様？ 未検証
-  'max_temp':    { pathKeys: { lv2: 'wdist', lv3: 'surf/max_temp' }, category: '天気予報分布', name: '日中の最高気温', targetTimesElement: 'max_temp', zoomLevelRange: [3, 10] },
-  'min_temp':    { pathKeys: { lv2: 'wdist', lv3: 'surf/min_temp' }, category: '天気予報分布', name: '朝の最低気温', targetTimesElement: 'min_temp', zoomLevelRange: [3, 10] },
+  'max-temp':    { pathKeys: { lv2: 'wdist', lv3: 'surf/max_temp' }, category: '天気予報分布', name: '日中の最高気温', targetTimesElement: 'max_temp', zoomLevelRange: [3, 10] },
+  'min-temp':    { pathKeys: { lv2: 'wdist', lv3: 'surf/min_temp' }, category: '天気予報分布', name: '朝の最低気温', targetTimesElement: 'min_temp', zoomLevelRange: [3, 10] },
+
+  'temp-point':     { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/temp_point'     }, category: '天気予報分布', name: '気温', targetTimesElement: 'temp_point', },
+  'max-temp-point': { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/min_temp_point' }, category: '天気予報分布', name: '日中の最高気温', targetTimesElement: 'max_temp_point', },
+  'min-temp-point': { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/max_temp_point' }, category: '天気予報分布', name: '朝の最低気温'  , targetTimesElement: 'min_temp_point', },
+
+  'weather-nodata':     { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/wm_nd'       }, category: '天気予報分布', name: '観測範囲外領域 [天気]', targetTimesElement: 'wm_nd' },
+  'temperature-nodata': { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/temp_nd'     }, category: '天気予報分布', name: '観測範囲外領域 [気温]', targetTimesElement: 'temp_nd' },
+  'r3-nodata':          { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/r3_nd'       }, category: '天気予報分布', name: '観測範囲外領域 [3時間降水量]', targetTimesElement: 'r3_nd' },
+  's3-nodata':          { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/s3_nd'       }, category: '天気予報分布', name: '観測範囲外領域 [3時間降雪量]', targetTimesElement: 's3_nd' },
+  'max-temp-nodata':    { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/max_temp_nd' }, category: '天気予報分布', name: '観測範囲外領域 [日中の最高気温]', targetTimesElement: 'max_temp_nd' },
+  'min-temp-nodata':    { type: 'geojson', pathKeys: { lv2: 'wdist', lv3: 'surf/min_temp_nd' }, category: '天気予報分布', name: '観測範囲外領域 [朝の最低気温]', targetTimesElement: 'min_temp_nd' },
 
   // 現在の雪
   'snow':         { pathKeys: { lv2: 'snow', lv3: 'surf/snowd'    }, category: '現在の雪', name: '積雪の深さ',   zoomLevelRange: [3, 11] },
@@ -72,6 +82,10 @@ const jmaLayerInfo = {
   // 危険度分布
   'shinsui1': { layerUrl: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l1_shinsuishin_oldlegend/{z}/{x}/{y}.png', category: '危険度分布', name: '洪水浸水想定区域（計画規模）', targetTimesFile: false, zoomLevelRange: [2, 16] },
   'shinsui2': { layerUrl: 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin/{z}/{x}/{y}.png', category: '危険度分布', name: '洪水浸水想定区域（想定最大規模）', targetTimesFile: false, zoomLevelRange: [2, 12] },
+
+  'landslide': { pathKeys: { lv2: 'risk', lv3: 'surf/land' }, category: '危険度分布', name: '土砂災害', },
+  'inundation': { pathKeys: { lv2: 'risk', lv3: 'surf/inund' }, category: '危険度分布', name: '浸水害', },
+  'flood': { pathKeys: { lv2: 'risk', lv3: 'surf/flood', ext: 'pbf' }, category: '危険度分布', name: '洪水害', },
 }
 
 const _minZoomLevel = 1;
@@ -79,7 +93,7 @@ const _maxZoomLevel = 24;
 let _lastTimeForCache = null;
 let _targetTimeCache = {};
 
-function utcToDate(utcYmdHM) {
+function parseUtcYmdHM(utcYmdHM) {
   const Y = utcYmdHM.substr(0, 4);
   const m = utcYmdHM.substr(4, 2);
   const d = utcYmdHM.substr(6, 2);
@@ -87,6 +101,10 @@ function utcToDate(utcYmdHM) {
   const M = utcYmdHM.substr(10, 2);
 
   return new Date(Date.UTC(+Y, m - 1, +d, +H, +M));
+}
+
+function toUtcYmdHM(t) {
+  return new Date(t).toJSON().substr(0, 16).replace(/[^0-9]/g, '');
 }
 
 function parseJSON(s) {
@@ -111,7 +129,7 @@ export async function fetchTargetTimes(layerId) {
 
   if (isStaticLayer(layerId)) return [{ layerInfo: getLayerInfo(layerId), tense: 'latest' }];
 
-  const timeForCache = new Date().toJSON().substr(0, 16).replace(/[^0-9]/g, ''); // 1分単位
+  const timeForCache = toUtcYmdHM(new Date()); // 1分単位
   if (timeForCache !== _lastTimeForCache) {
     _targetTimeCache = {};
     _lastTimeForCache = timeForCache;
@@ -126,24 +144,24 @@ export async function fetchTargetTimes(layerId) {
     return (_targetTimeCache[url] = fetch(url).then(res => res.text())).then(s => parseJSON(s));
   }))
     .then(values => Array.prototype.concat.apply([], values))
-    .then(json => info.targetTimesElement ? json.filter(e => e.elements && e.elements.indexOf(info.targetTimesElement) >= 0) : json)
+    .then(json => info.targetTimesElement ? json.filter(e => e.elements && e.elements.indexOf(info.targetTimesElement) >= 0 && parseUtcYmdHM(e.basetime).getTime() + (info.basetimeDelay || 0) <= new Date().getTime()) : json)
   ;
 
   targetTimes.sort((l, r) => (l.basetime === r.basetime ? l.validtime < r.validtime : l.basetime < r.basetime) ? -1 : 1);
 
   let latestBaseTime = null;
   targetTimes.forEach(json => {
-    json.tense = json.basetime < json.validtime ? 'forecast' : 'past';
-    if (!latestBaseTime || latestBaseTime < json.basetime) latestBaseTime = json.basetime;
+    if (json.basetime) json.basetimeInDate = parseUtcYmdHM(json.basetime);
+    if (json.validtime) json.validtimeInDate = parseUtcYmdHM(json.validtime);
+
+    json.tense = (json.basetimeInDate) < json.validtimeInDate ? 'forecast' : 'past';
+    if (!latestBaseTime || latestBaseTime < json.basetimeInDate) latestBaseTime = json.basetimeInDate;
 
     json.layerInfo = getLayerInfo(layerId, json);
-
-    if (json.basetime) json.basetimeInDate = utcToDate(json.basetime);
-    if (json.validtime) json.validtimeInDate = utcToDate(json.validtime);
   });
   
   // set latest
-  let latest = targetTimes.find(json => json.basetime === latestBaseTime && json.basetime === json.validtime);
+  let latest = targetTimes.find(json => (json.basetimeInDate) === latestBaseTime && json.basetime === json.validtime);
   if (latest) latest.tense = 'latest';
 
   return targetTimes;
@@ -153,6 +171,9 @@ export function getLayerInfo(layerId, targetTimes = null) {
   const info = jmaLayerInfo[layerId];
   if (!info) return null;
 
+  const isTile = !info.type || info.type === 'tile';
+  const isGeoJSON = info.type == 'geojson';
+
   const result = {
     id: layerId,
     name: info.name || layerId,
@@ -161,9 +182,11 @@ export function getLayerInfo(layerId, targetTimes = null) {
     requireTargetTimes: !isStaticLayer(layerId),
 
     layerType: info.type || 'tile',
-    format: info.pathKeys && info.pathKeys.ext || defaultPathKeys.ext, // geojson, jpg, png, pbf
+    format: isGeoJSON ? 'geojson' : (info.pathKeys && info.pathKeys.ext || defaultPathKeys.ext), // geojson, jpg, png, pbf
 
     attributions: '気象データ &copy; Japan Meteorological Agency',
+
+    basetimeDelay: info.basetimeDelay || 0,
   }
 
   result.url = getLayerURL(layerId, targetTimes);
@@ -203,4 +226,11 @@ export function getLayerURL(layerId, targetTime, template = null) {
 
 export function getLayerIds() {
   return Object.keys(jmaLayerInfo);
+}
+
+export default {
+  fetchTargetTimes,
+  getLayerInfo,
+  getLayerURL,
+  getLayerIds,
 }
