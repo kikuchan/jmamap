@@ -18,7 +18,7 @@ npm i jmamap
 
 ### Simply with OpenLayers
 ```
-import { JMALayer } from 'jmamap';
+import { JMALayer } from 'jmamap/ol';
     :
 map.addLayer(new JMALayer('base'));
 map.addLayer(new JMALayer('raincloud'));
