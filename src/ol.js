@@ -15,7 +15,7 @@ function s_curve(xmin, xmax, a = 2, xmid = -1) {
   });
 }
 
-export function JMALayer(layerId, opts = {}) {
+export function JMALayer(layerId, opts = {}, sourceOpts = {}) {
   this._layerInfo = getLayerInfo(layerId);
 
   const constructorFor = {
@@ -38,6 +38,7 @@ export function JMALayer(layerId, opts = {}) {
   }[layerId]) ?? false;
 
   const curveTbl = s_curve(64, 255, 4);
+  const curveTbl2 = s_curve(0, 255, 8);
 
   function tileLoadFunction(tile, src) {
     const img = new Image();
@@ -58,9 +59,9 @@ export function JMALayer(layerId, opts = {}) {
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const idx = (y * width + x) * 4;
-          outputData[idx + 0] = 255;
-          outputData[idx + 1] = 255;
-          outputData[idx + 2] = 255;
+          outputData[idx + 0] = curveTbl2[inputData[idx + 0]];
+          outputData[idx + 1] = curveTbl2[inputData[idx + 1]];
+          outputData[idx + 2] = curveTbl2[inputData[idx + 2]];
           outputData[idx + 3] = curveTbl[inputData[idx + 0]]; // R
         }
       }
@@ -85,17 +86,22 @@ export function JMALayer(layerId, opts = {}) {
     switch (this._layerInfo.format) {
     case 'geojson':
       this.setSource(new VectorSource({
+        ... sourceOpts,
         url,
         attributions: this._layerInfo.attributions,
+        attributionsCollapsible: false,
         format: new GeoJSON(),
       }));
       break;
 
-    case 'png':
     case 'jpg':
+    case 'png':
       this.setSource(new XYZ({
+        interpolate: this._layerInfo.format == 'jpg',
+        ... sourceOpts,
         url,
         attributions: this._layerInfo.attributions,
+        attributionsCollapsible: false,
 
         zoomLevels: this._layerInfo.zoomLevels,
         minZoom   : this._layerInfo.minZoom,
@@ -107,8 +113,10 @@ export function JMALayer(layerId, opts = {}) {
 
     case 'pbf':
       this.setSource(new VectorTileSource({
+        ... sourceOpts,
         url,
         attributions: this._layerInfo.attributions,
+        attributionsCollapsible: false,
         format: new MVT(),
       }));
       break;
