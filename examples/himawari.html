@@ -21,7 +21,7 @@
   </style>
 
   <script type="module">
-    import { fetchTargetTimes, getLayerIds, getLayerInfo } from '../src/index.js'
+    import { fetchTargetTimes, getLayerIds, getLayerInfo } from '../dist/index.js'
 
     async function fetchLayer(layerId) {
       const targetTimes = await fetchTargetTimes(layerId).catch(e => []);

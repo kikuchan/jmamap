@@ -8,10 +8,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^2.9.9"
+    "vite": "^5.0.3"
   },
   "dependencies": {
-    "jmamap": "^1.1.0",
-    "ol": "^6.0.0"
+    "jmamap": "../../dist",
+    "ol": "^8.2.0"
   }
 }

@@ -10,7 +10,7 @@ import {useGeographic} from 'ol/proj';
 
 useGeographic();
 
-const map = new Map({
+new Map({
   layers: [
     new TileLayer({
       source: new OSM(),
