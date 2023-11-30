@@ -22,6 +22,7 @@ export class JMAVectorTileLayer extends VectorTileLayer {
 
     this.sourceOpts = sourceOpts;
 
+    this.reload();
   }
 
   reload() {
