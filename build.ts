@@ -37,5 +37,5 @@ fs.writeFileSync(
         import: './ol/index.js',
       },
     },
-  }),
+  }, undefined, 2),
 );
