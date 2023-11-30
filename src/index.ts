@@ -688,7 +688,11 @@ function rewriteURL(url: string, template: Record<string, string | number>): str
     : url;
 }
 
-export function getLayerURL(layerId: LayerName, targetTime: Record<string, unknown>, template: Record<string, unknown> = {}) {
+export function getLayerURL(
+  layerId: LayerName,
+  targetTime: Record<string, unknown>,
+  template: Record<string, unknown> = {},
+) {
   const info = jmaLayerInfo[layerId];
   if (!info) throw new Error('Unknown layer');
 
