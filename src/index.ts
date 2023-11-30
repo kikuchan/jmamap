@@ -32,23 +32,23 @@ const LayerInfoDefs = {
     type: 'tile',
     layerUrl: 'https://www.jma.go.jp/tile/jma/base/{z}/{x}/{y}.png',
     category: '基本地図',
-    name: 'base',
+    name: '標準',
     targetTimesFile: false,
     zoomLevelRange: [3, 11],
   },
   pale: {
     type: 'tile',
     layerUrl: 'https://www.jma.go.jp/tile/gsi/pale/{z}/{x}/{y}.png',
-    category: '基本地図(地名あり)',
-    name: 'pale',
+    category: '基本地図',
+    name: '淡色地図(地名あり)',
     targetTimesFile: false,
     zoomLevelRange: [2, 14],
   },
   pale2: {
     type: 'tile',
     layerUrl: 'https://www.jma.go.jp/tile/gsi/pale2/{z}/{x}/{y}.png',
-    category: '基本地図(地名なし)',
-    name: 'pale2',
+    category: '基本地図',
+    name: '淡色地図(地名なし)',
     targetTimesFile: false,
     zoomLevelRange: [2, 14],
   },
@@ -56,7 +56,7 @@ const LayerInfoDefs = {
     type: 'tile',
     layerUrl: 'https://www.jma.go.jp/tile/jma/green-cities/{z}/{x}/{y}.png',
     category: '基本地図',
-    name: 'green',
+    name: '緑色地図',
     targetTimesFile: false,
     zoomLevelRange: [3, 10],
   },
@@ -64,7 +64,7 @@ const LayerInfoDefs = {
     type: 'tile',
     pathKeys: { lv2: 'map', lv3: 'surf/mask' },
     category: '基本地図',
-    name: 'mask',
+    name: 'マスク',
     targetTimesFile: false,
     zoomLevelRange: [3, 14],
   },
@@ -501,9 +501,10 @@ const LayerInfoDefs = {
     name: '洪水害',
   },
 } satisfies Record<string, LayerInfoTemplate>;
-const jmaLayerInfo: Record<string, LayerInfoTemplate> = LayerInfoDefs;
+
 export type LayerName = keyof typeof LayerInfoDefs;
 export type LayerType<T extends LayerName> = (typeof LayerInfoDefs)[T]['type'];
+const jmaLayerInfo: Record<LayerName, LayerInfoTemplate> = LayerInfoDefs;
 
 const _minZoomLevel = 1;
 const _maxZoomLevel = 24;
@@ -710,7 +711,7 @@ export function getLayerURL(
 }
 
 export function getLayerIds() {
-  return Object.keys(jmaLayerInfo);
+  return Object.keys(jmaLayerInfo) as LayerName[];
 }
 
 export default {
