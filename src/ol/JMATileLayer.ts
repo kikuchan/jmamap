@@ -60,6 +60,7 @@ function tileLoadFunction(tile: Tile, src: string) {
   img.src = src;
 }
 
+type Tense = 'latest' | 'past' | 'forecast';
 export type LayerOptions = {
   isCloud?: boolean;
 } & TileLayerOptions<XYZ>;
@@ -85,7 +86,7 @@ export class JMATileLayer extends TileLayer<XYZ> {
 
   reload() {
     fetchTargetTimes(this.layerInfo.id)
-      .then((r) => r.find((x) => x.tense === 'latest'))
+      .then((r) => r.find((x) => x.tense === 'latest') || r.find((x) => x.tense == 'forecast'))
       .then((t) => this.setTargetTime(t));
   }
 

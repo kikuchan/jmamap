@@ -541,7 +541,7 @@ function isStaticLayer(layerId: LayerName) {
   const info = jmaLayerInfo[layerId];
   if (!info) return false;
 
-  return info.targetTimesFile === false || info.targetTimesFile === undefined;
+  return info.targetTimesFile === false;
 }
 
 export type TargetTime = {
