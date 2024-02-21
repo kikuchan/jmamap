@@ -15,7 +15,7 @@ jobs:
           node-version: 18
           registry-url: https://registry.npmjs.org/
       - uses: oven-sh/setup-bun@v1
-      - run: npm ci
+      - run: bun i --frozen-lockfile
       - run: bun run build
       - run: bun run test
       - run: npm publish ./dist/
